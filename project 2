@@ -1,0 +1,296 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define MAX_ORGS 100
+
+typedef struct {
+    char name[50];
+    int predators[MAX_ORGS];
+    int numPredators;
+    int prey[MAX_ORGS];
+    int numPrey;
+} Organism;
+
+typedef struct {
+    Organism organisms[MAX_ORGS];
+    int numOrganisms;
+} FoodWeb;
+#define MAX_NAME_LEN 50
+
+// Define the Organism structure
+typedef struct {
+    char name[MAX_NAME_LEN];
+    int *prey;       // Array of prey
+    int numPrey;     // Number of prey
+} Org;
+//Initialize the Food Web
+void initFoodWeb(FoodWeb *web) {
+    web->numOrganisms = 0;
+}
+// void initFoodWeb(Org ***ppWeb, int *pNumOrg) {
+//     *ppWeb = NULL;  // Initialize the pointer to NULL
+//     *pNumOrg = 0;   // Initialize the organism count to 0
+// }
+
+// Function to find organism index by name
+int findOrganismIndex(FoodWeb *web, char *name) {
+    for (int i = 0; i < web->numOrganisms; i++) {
+        if (strcmp(web->organisms[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1; // Not found
+}
+
+// // Add organism to the food web
+// bool addOrgToWeb(FoodWeb *web, char *name) {
+//     if (web->numOrganisms >= MAX_ORGS) {
+//         return false; // Web is full
+//     }
+//     if (findOrganismIndex(web, name) != -1) {
+//         return false; // Organism already exists
+//     }
+//     strcpy(web->organisms[web->numOrganisms].name, name);
+//     web->organisms[web->numOrganisms].numPredators = 0;
+//     web->organisms[web->numOrganisms].numPrey = 0;
+//     web->numOrganisms++;
+//     return true;
+// }
+// Function to add an organism to the food web
+
+void addOrgToWeb(Org ***ppWeb, int *pNumOrg, const char *newOrgName) {
+    // Step 1: Check if the food web is empty
+    if (*ppWeb == NULL) {
+        //Allocate memory for one organism
+        *ppWeb = (Org **)malloc(sizeof(Org *));
+        *ppWeb[0] = (Org *)malloc(sizeof(Org));  // Allocate memory for the first organism
+
+        //Copy the organism name
+        strcpy((*ppWeb)[0]->name, newOrgName);
+
+        //Initialize prey array and numPrey
+        (*ppWeb)[0]->prey = NULL;
+        (*ppWeb)[0]->numPrey = 0;
+
+        //Updating the number of organisms in the web
+        *pNumOrg = 1;
+        return;
+    }
+
+    //Step 2:If the web already has organisms
+    Org **newWeb = (Org **)malloc((*pNumOrg + 1) * sizeof(Org *));
+
+    //Copy old organisms to the new array
+    for (int i = 0; i < *pNumOrg; i++) {
+        newWeb[i] = (*ppWeb)[i];
+    }
+
+    //Allocating memory for the new organism
+    newWeb[*pNumOrg] = (Org *)malloc(sizeof(Org));
+
+    //Copy the organism name
+    strcpy(newWeb[*pNumOrg]->name, newOrgName);
+
+    //Initialize prey array and numPrey for the new organism
+    newWeb[*pNumOrg]->prey = NULL;
+    newWeb[*pNumOrg]->numPrey = 0;
+
+    // Free the old one
+    free(*ppWeb);
+
+    *ppWeb = newWeb;
+    (*pNumOrg)++;
+}
+
+
+
+
+
+
+
+// Add relationship to the food web
+bool addRelationToWeb(FoodWeb *web, char *predatorName, char *preyName) {
+    int predatorIndex = findOrganismIndex(web, predatorName);
+    int preyIndex = findOrganismIndex(web, preyName);
+    if (predatorIndex == -1 || preyIndex == -1) {
+        return false; // Organism not found
+    }
+    // Add prey to predator's list
+    web->organisms[predatorIndex].prey[web->organisms[predatorIndex].numPrey++] = preyIndex;
+    // Add predator to prey's list
+    web->organisms[preyIndex].predators[web->organisms[preyIndex].numPredators++] = predatorIndex;
+    return true;
+}
+
+// Remove organism from the food web
+bool removeOrgFromWeb(FoodWeb *web, char *name) {
+    int index = findOrganismIndex(web, name);
+    if (index == -1) {
+        return false; // Organism not found
+    }
+    // Remove organism and shift others
+    for (int i = index; i < web->numOrganisms - 1; i++) {
+        web->organisms[i] = web->organisms[i + 1];
+    }
+    web->numOrganisms--;
+    // Update indices in predator and prey lists
+    for (int i = 0; i < web->numOrganisms; i++) {
+        for (int j = 0; j < web->organisms[i].numPredators; j++) {
+            if (web->organisms[i].predators[j] == index) {
+                for (int k = j; k < web->organisms[i].numPredators - 1; k++) {
+                    web->organisms[i].predators[k] = web->organisms[i].predators[k + 1];
+                }
+                web->organisms[i].numPredators--;
+            }
+        }
+        for (int j = 0; j < web->organisms[i].numPrey; j++) {
+            if (web->organisms[i].prey[j] == index) {
+                for (int k = j; k < web->organisms[i].numPrey - 1; k++) {
+                    web->organisms[i].prey[k] = web->organisms[i].prey[k + 1];
+                }
+                web->organisms[i].numPrey--;
+            }
+        }
+    }
+    return true;
+}
+
+void printFoodWeb(Org **pWeb, int numOrg) {
+    printf("Food Web Organisms:\n");
+    for (int i = 0; i < numOrg; i++) {
+        printf("  %s\n", pWeb[i]->name);
+    }
+}
+
+// void printFoodWeb(Org **pWeb, int numOrg) {
+//     printf("Food Web Organisms:\n");
+//     for (int i = 0; i < numOrg; i++) {
+//         printf("  %s\n", pWeb[i]->name);
+//     }
+// }
+
+// // Print the food web
+// void printFoodWeb(FoodWeb *web) {
+//     printf("\nFood Web Predators & Prey:\n");
+//     for (int i = 0; i < web->numOrganisms; i++) {
+//         printf("  (%d) %s", i, web->organisms[i].name);
+//         if (web->organisms[i].numPrey > 0) {
+//             printf(" eats");
+//             for (int j = 0; j < web->organisms[i].numPrey; j++) {
+//                 printf(" %s", web->organisms[web->organisms[i].prey[j]].name);
+//                 if (j < web->organisms[i].numPrey - 1) printf(",");
+//             }
+//         }
+//         printf("\n");
+//     }
+// }
+
+// Helper function to check if a string starts with a given prefix
+bool startsWith(const char *str, const char *prefix) {
+    return strncmp(str, prefix, strlen(prefix)) == 0;
+}
+
+// Function to set the program modes based on command-line arguments
+bool setModes(int argc, char *argv[], bool *pBasicMode, bool *pDebugMode, bool *pQuietMode) {
+    // Initialize mode flags to false
+    *pBasicMode = false;
+    *pDebugMode = false;
+    *pQuietMode = false;
+
+    // Loop through the command-line arguments
+    for (int i = 1; i < argc; i++) {
+        char *arg = argv[i];
+
+        // Check if the argument starts with -b (for basic mode)
+        if (startsWith(arg, "-b")) {
+            if (*pBasicMode) {
+                // If basic mode is already set, return false for duplicate
+                return false;
+            }
+            *pBasicMode = true;
+
+        // Check if the argument starts with -d (for debug mode)
+        } else if (startsWith(arg, "-d")) {
+            if (*pDebugMode) {
+                // If debug mode is already set, return false for duplicate
+                return false;
+            }
+            *pDebugMode = true;
+
+        // Check if the argument starts with -q (for quiet mode)
+        } else if (startsWith(arg, "-q")) {
+            if (*pQuietMode) {
+                // If quiet mode is already set, return false for duplicate
+                return false;
+            }
+            *pQuietMode = true;
+
+        // If the argument does not match any valid mode, return false for invalid argument
+        } else {
+            return false;
+        }
+    }
+
+    // If all arguments are valid and no duplicates, return true
+    return true;
+}
+
+
+
+int main(int argc, char *argv[]) {
+    
+    bool basicMode, debugMode, quietMode;
+
+    if (!setModes(argc, argv, &basicMode, &debugMode, &quietMode)) {
+        printf("Invalid or duplicate command-line arguments.\n");
+        return 1;
+    }
+
+    Org **foodWeb = NULL;
+    int numOrganisms = 0;
+
+    // Adding some organisms to the food web
+    addOrgToWeb(&foodWeb, &numOrganisms, "Lion");
+    addOrgToWeb(&foodWeb, &numOrganisms, "Zebra");
+    addOrgToWeb(&foodWeb, &numOrganisms, "Grass");
+
+    // Print the food web
+    printFoodWeb(foodWeb, numOrganisms);
+
+   // Free allocated memory
+    for (int i = 0; i < numOrganisms; i++) {
+        free(foodWeb[i]);
+    }
+  
+// Org **foodWeb;
+//     int numOrganisms;
+
+//     initFoodWeb(&foodWeb, &numOrganisms);
+
+//     addOrgToWeb(&foodWeb, &numOrganisms, "Lion");
+//     addOrgToWeb(&foodWeb, &numOrganisms, "Zebra");
+//     addOrgToWeb(&foodWeb, &numOrganisms, "Grass");
+
+//     printFoodWeb(foodWeb, numOrganisms);
+
+//     // Free allocated memory
+//     for (int i = 0; i < numOrganisms; i++) {
+//         free(foodWeb[i]->prey); // Free prey array if allocated
+//         free(foodWeb[i]);       // Free each organism
+//     }
+//     free(foodWeb);             // Free the food web array
+
+//     return 0;
+
+        printf("--------------------------------\n");
+    }
+
+    for(int i=0;i<numOrgs;i++){
+        free(web[i].prey);
+    }
+    
+    free(web);
+    return 0;
+};
